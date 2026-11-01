@@ -14,7 +14,7 @@ export const TRAIL_ASSETS = [
   "/trails/iron-man.svg",
 ];
 export const TRAIL_SETTINGS = {
-  desktop: { max: 8, distance: 64, lifetime: 850, size: 54 },
+  desktop: { max: 12, distance: 28, lifetime: 760, size: 48 },
   touch: { max: 24, distance: 10, lifetime: 1000, size: 42 },
 };
 
@@ -91,7 +91,7 @@ export function PointerTrails() {
       particles = particles.filter((particle) => now - particle.born < particle.life);
       for (const p of particles) {
         const age = (now - p.born) / p.life;
-        const ease = 1 - Math.exp(-delta / 65);
+        const ease = 1 - Math.exp(-delta / 80);
         p.x += (p.targetX - p.x) * ease;
         p.y += (p.targetY - p.y) * ease;
         const fade = Math.min(age * 9, 1) * (1 - age) ** (mode === "touch" ? 1.2 : 1.5);
@@ -118,14 +118,14 @@ export function PointerTrails() {
       const settings = TRAIL_SETTINGS[kind];
       const now = performance.now();
       const distance = last ? Math.hypot(point.x - last.x, point.y - last.y) : Infinity;
-      if (distance < settings.distance || now - lastEmit < (kind === "touch" ? 28 : 45)) return;
+      if (distance < settings.distance || now - lastEmit < (kind === "touch" ? 28 : 16)) return;
       particles.push({
         x: last && distance < 150 ? last.x : point.x,
         y: last && distance < 150 ? last.y : point.y,
         targetX: point.x, targetY: point.y, born: now, life: settings.lifetime,
-        size: settings.size * (.85 + Math.random() * .3),
-        rotation: (Math.random() - .5) * .5,
-        drift: (Math.random() - .5) * (kind === "touch" ? 42 : 26),
+        size: settings.size * (kind === "touch" ? .85 + Math.random() * .3 : .95 + Math.random() * .1),
+        rotation: (Math.random() - .5) * (kind === "touch" ? .5 : .16),
+        drift: (Math.random() - .5) * (kind === "touch" ? 42 : 10),
         image: kind === "desktop" ? sequence++ % images.length : 0,
       });
       const cap = lowPower ? Math.min(settings.max, 16) : settings.max;
@@ -136,7 +136,7 @@ export function PointerTrails() {
     const mouse = (event: PointerEvent) => {
       if (event.pointerType !== "mouse" || !fine.matches || touchId !== null) return;
       const target = event.target as Element;
-      if (!target.closest("[data-trail-area]") || target.closest(`${interactive}, h1, p`)) { last = null; return; }
+      if (target.closest(interactive)) { last = null; return; }
       emit({ x: event.clientX, y: event.clientY }, "desktop");
     };
     // Touch events continue during native scrolling, unlike cancelled Pointer Events.

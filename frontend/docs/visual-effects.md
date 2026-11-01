@@ -7,11 +7,11 @@ The existing Next.js/React/Tailwind application and npm lockfile are retained. N
 | File | Responsibility / adjustments |
 | --- | --- |
 | `components/layout/Navbar.tsx` + `Navbar.module.css` | Reference-based navigation: Bangers/Barlow, cream mobile and inner pages, navy desktop home, lightning mark, ordered links and separate game action. Collapse below 1100 px. Bar including border: 82 px mobile, 96 px desktop. |
-| `components/home/HeroSection.tsx` | `HERO_IMAGES` selects the replaceable comic artwork. `HERO_MOTION.desktop/mobile` configures extra zoom (`0.14` / `0.06`), background shift (`40` / `18` px), title shift (`16` / `8` px). Base scale is `1.04`. Zoom is greatest at the top and decreases as the hero leaves view. |
-| `components/home/HeroSection.module.css` | `--comic-duration` is 85 seconds desktop / 100 seconds mobile. Increase it for slower movement. Two identical sequences, including their trailing gap, translate by half the track width. The outer depth layer owns scroll transforms. Panel widths, tint, headline sizing and safe-area spacing are also here. |
-| `components/effects/PointerTrails.tsx` | `TRAIL_ASSETS` accepts local image paths. `TRAIL_SETTINGS` controls max particles, movement threshold (`distance`), lifespan in ms, and size in px. Desktop defaults: 8 / 64 / 850 / 54. Touch: 24 / 10 / 1000 / 42. Touch uses a precomputed, feathered multi-wisp fog texture with no dots or comic flecks; clouds expand, drift upward and fade over one second. Lower distance creates denser trails. |
+| `components/home/HeroSection.tsx` | `HERO_IMAGES` selects the replaceable comic artwork. The images are split across three duplicated vertical rails; the center rail scrolls in reverse. The rails pause when the hero is off-screen or the page is hidden. |
+| `components/home/HeroSection.module.css` | `--comic-duration` controls each rail's 32-second vertical loop. Two identical sequences in each rail translate by half the track height for a seamless loop. Rail layout, tint, headline sizing and reduced-motion behavior are also here. |
+| `components/effects/PointerTrails.tsx` | `TRAIL_ASSETS` accepts local image paths. `TRAIL_SETTINGS` controls max particles, movement threshold (`distance`), lifespan in ms, and size in px. Desktop defaults: 12 / 28 / 760 / 48. Touch: 24 / 10 / 1000 / 42. Touch uses a precomputed, feathered multi-wisp fog texture with no dots or comic flecks; clouds expand, drift upward and fade over one second. Lower distance creates denser trails. |
 | `public/trails/spider-mask.svg` | Local vector Spider-Man-style face created for this implementation. Replace it directly or add transparent SVG/WebP/PNG images to `TRAIL_ASSETS`. No Skiper source or Pro package is included. |
-| `components/effects/useMotion.ts` | Shared pause/resume state and live OS reduced-motion preference. No animation-driven React updates. The hero pause button stops both the hero and trails. |
+| `components/effects/useMotion.ts` | Shared live OS reduced-motion preference for the hero and pointer trails. |
 | `components/ui/Reveal.tsx` | Progressive section reveal. Content remains available without JavaScript, with reduced motion, or without IntersectionObserver. |
 | `components/ui/GameSiteEntryModal.tsx` | Existing game information preserved, with native dialog focus trapping, Escape, scroll containment and focus restoration. The destination remains unconfigured, as before. |
 | `app/layout.tsx`, `app/globals.css` | Scoped font variables, decorative canvas, skip link, visible focus, reduced-motion safeguards. |
@@ -23,9 +23,11 @@ The first-edition strip reuses nine project files that remain in `public/` (`spi
 
 The supplied mobile reference is a navigation guide, not a complete mobile homepage. The navigation follows it; the mobile hero composition is an interpretation using the existing festival content and artwork.
 
-The cursor behavior is an independent implementation inspired by the supplied reference: https://skiper-ui.com/v1/skiper18. It emits small character faces by distance, with delayed following and fading, and preserves the normal cursor. It runs only over the hero on a fine hovering mouse, avoiding foreground headings and controls. Mobile mist runs across pages using passive Touch Events because Pointer Events can be cancelled when native scrolling starts. Multitouch suspends emission without blocking pinch gestures. All effects clean up listeners and RAF work; the hero pauses off-screen and when hidden, and trails stop rendering when empty or hidden. Canvas DPR is capped at 1.5 (1 on devices reporting at most four logical cores).
+The cursor behavior is an independent implementation inspired by the supplied reference: https://skiper-ui.com/v1/skiper18. It emits small character faces across the page on a fine hovering mouse, with smoother spacing, delayed following and fading, and preserves the normal cursor. It skips interactive controls. Mobile mist runs across pages using passive Touch Events because Pointer Events can be cancelled when native scrolling starts. Multitouch suspends emission without blocking pinch gestures. All effects clean up listeners and RAF work; the hero pauses off-screen and when hidden, and trails stop rendering when empty or hidden. Canvas DPR is capped at 1.5 (1 on devices reporting at most four logical cores).
 
-## Verification (31 October 2026)
+## Previous verification (31 October 2026)
+
+The checks below describe the implementation before the later hero, navigation-button, and page-wide mouse-trail changes. Those changes have not yet been visually or mechanically verified.
 
 - Inspected the original running site at desktop and 390 px before edits; original browser console had no errors.
 - Visually inspected updated 320×740, 390×844, 768×1024, 844×390 landscape, and 1440×900 layouts. No document horizontal overflow at these sizes. Landscape menu scrolls internally to keep all actions reachable.
@@ -39,6 +41,6 @@ The cursor behavior is an independent implementation inspired by the supplied re
 - `npm run build`: passed, generating all 18 pages. The first sandboxed attempt failed to fetch fonts and left a cached Turbopack worker-port failure. A clean build cache and the required execution permissions resolved it. The existing multiple-lockfile warning remains.
 - Full-project `npm run lint`: still fails on the pre-existing `app/schedule/page.tsx:72` synchronous state-in-effect error, plus the existing unused `comicStamp` warning in `components/ui/Badge.tsx:53`. The old Reveal error and hero image warning are resolved.
 
-Remaining checks: physical iOS/Android scrolling, taps, pinch-to-zoom, touch mist appearance, real low-end frame pacing, and OS-level reduced-motion rendering. Viewport resizing is not touch-device emulation. Reduced-motion logic and CSS safeguards are implemented, but the browser interface used here does not expose media-preference emulation. No registration or contact submission was performed.
+Checks still outstanding: physical iOS/Android scrolling, taps, pinch-to-zoom, touch mist appearance, real low-end frame pacing, and OS-level reduced-motion rendering. Viewport resizing is not touch-device emulation. Reduced-motion logic and CSS safeguards are implemented, but the browser interface used here does not expose media-preference emulation. No registration or contact submission was performed.
 
 Run locally from `frontend`: `npm ci`, then `npm run dev -- --hostname 127.0.0.1`. Preview: http://127.0.0.1:3000.
