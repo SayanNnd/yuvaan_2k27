@@ -9,12 +9,12 @@ import { Container } from "@/components/ui/Container";
 export const HERO_IMAGES: string[] = [
   // Column 1
   "/spiderman.jpg",
-  "/dragon ball.jpg",
+  "/horimiya.webp",
   "/dr doom.jpg",
 
   // Column 2 (reverse scroll)
   "/beserk.jpg",
-  "/batman.jpg",
+  "/batman.jpeg",
   "/jojo.jpg",
 
   // Column 3
