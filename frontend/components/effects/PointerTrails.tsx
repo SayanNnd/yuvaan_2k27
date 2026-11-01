@@ -14,13 +14,13 @@ export const TRAIL_ASSETS = [
   "/trails/iron-man.svg",
 ];
 export const TRAIL_SETTINGS = {
-  desktop: { max: 12, distance: 28, lifetime: 760, size: 48 },
+  desktop: { max: 10, distance: 100, lifetime: 1800, size: 48 },
   touch: { max: 24, distance: 10, lifetime: 1000, size: 42 },
 };
 
 type Point = { x: number; y: number };
 type Particle = Point & {
-  targetX: number; targetY: number; born: number; life: number;
+  born: number; life: number;
   rotation: number; size: number; drift: number; image: number;
 };
 const interactive = "a, button, input, select, textarea, nav, [role='dialog'], [data-no-trail]";
@@ -61,6 +61,7 @@ export function PointerTrails() {
 
     let particles: Particle[] = [];
     let last: Point | null = null;
+    let distanceRemainder = 0;
     let frame = 0;
     let lastDraw = 0;
     let touchId: number | null = null;
@@ -72,33 +73,32 @@ export function PointerTrails() {
     const clear = () => ctx.clearRect(0, 0, width, height);
     const reset = () => {
       cancelAnimationFrame(frame); frame = 0;
-      particles = []; last = null; touchId = null; clear();
+      particles = []; last = null; distanceRemainder = 0; touchId = null; lastEmit = 0; clear();
     };
     const resize = () => {
       width = innerWidth; height = innerHeight;
       const dpr = Math.min(devicePixelRatio || 1, lowPower ? 1 : 1.5);
       canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      particles = []; last = null;
+      particles = []; last = null; distanceRemainder = 0;
     };
     const draw = (now: number) => {
       frame = 0;
       const interval = mode === "touch" || lowPower ? 1000 / 30 : 1000 / 60;
       if (now - lastDraw < interval - 1) { frame = requestAnimationFrame(draw); return; }
-      const delta = Math.min(40, now - lastDraw || 16);
       lastDraw = now;
       clear();
       particles = particles.filter((particle) => now - particle.born < particle.life);
       for (const p of particles) {
         const age = (now - p.born) / p.life;
-        const ease = 1 - Math.exp(-delta / 80);
-        p.x += (p.targetX - p.x) * ease;
-        p.y += (p.targetY - p.y) * ease;
-        const fade = Math.min(age * 9, 1) * (1 - age) ** (mode === "touch" ? 1.2 : 1.5);
+        const fadeInDuration = mode === "touch" ? 120 : 300;
+        const fadeInProgress = Math.min((now - p.born) / fadeInDuration, 1);
+        const fadeIn = fadeInProgress * fadeInProgress * (3 - 2 * fadeInProgress);
+        const fade = fadeIn * (1 - age) ** (mode === "touch" ? 1.2 : 1.5);
         const size = p.size * (mode === "touch" ? 1 + age * 1.4 : 1 - age * .16);
         ctx.save();
-        ctx.translate(p.x + p.drift * age, p.y - age * (mode === "touch" ? 36 : 10));
-        ctx.rotate(p.rotation + age * .12);
+        ctx.translate(p.x + (mode === "touch" ? p.drift * age : 0), p.y - age * (mode === "touch" ? 36 : 0));
+        ctx.rotate(mode === "touch" ? p.rotation + age * .12 : p.rotation);
         ctx.globalAlpha = fade * (mode === "touch" ? 1 : .85);
         if (mode === "touch") {
           // Broad, slightly flattened clouds overlap into a translucent trail;
@@ -117,44 +117,76 @@ export function PointerTrails() {
       if (mode !== kind) { reset(); mode = kind; }
       const settings = TRAIL_SETTINGS[kind];
       const now = performance.now();
-      const distance = last ? Math.hypot(point.x - last.x, point.y - last.y) : Infinity;
-      if (distance < settings.distance || now - lastEmit < (kind === "touch" ? 28 : 16)) return;
-      particles.push({
-        x: last && distance < 150 ? last.x : point.x,
-        y: last && distance < 150 ? last.y : point.y,
-        targetX: point.x, targetY: point.y, born: now, life: settings.lifetime,
-        size: settings.size * (kind === "touch" ? .85 + Math.random() * .3 : .95 + Math.random() * .1),
-        rotation: (Math.random() - .5) * (kind === "touch" ? .5 : .16),
-        drift: (Math.random() - .5) * (kind === "touch" ? 42 : 10),
-        image: kind === "desktop" ? sequence++ % images.length : 0,
-      });
+      const positions: Point[] = [];
+      if (kind === "touch") {
+        if (now - lastEmit < 28) return;
+        if (last && Math.hypot(point.x - last.x, point.y - last.y) < settings.distance) return;
+        positions.push(point);
+        last = point;
+        lastEmit = now;
+      } else {
+        const previous = last;
+        if (!previous) {
+          positions.push(point);
+          distanceRemainder = 0;
+        } else {
+          const dx = point.x - previous.x;
+          const dy = point.y - previous.y;
+          const segmentLength = Math.hypot(dx, dy);
+          const carriedDistance = distanceRemainder % settings.distance;
+          const totalDistance = carriedDistance + segmentLength;
+          const sampleCount = Math.floor(totalDistance / settings.distance);
+          const firstSample = settings.distance - carriedDistance;
+          for (let sample = 0; sample < sampleCount; sample++) {
+            const distanceAlongSegment = firstSample + sample * settings.distance;
+            const ratio = distanceAlongSegment / segmentLength;
+            positions.push({ x: previous.x + dx * ratio, y: previous.y + dy * ratio });
+          }
+          distanceRemainder = totalDistance - sampleCount * settings.distance;
+        }
+        last = point;
+      }
+      if (positions.length === 0) return;
+
+      for (const position of positions) {
+        particles.push({
+          ...position,
+          born: now,
+          life: settings.lifetime,
+          size: settings.size * (kind === "touch" ? .85 + Math.random() * .3 : .95 + Math.random() * .1),
+          rotation: (Math.random() - .5) * (kind === "touch" ? .5 : .16),
+          drift: kind === "touch" ? (Math.random() - .5) * 42 : 0,
+          image: kind === "desktop" ? sequence++ % images.length : 0,
+        });
+      }
       const cap = lowPower ? Math.min(settings.max, 16) : settings.max;
       if (particles.length > cap) particles.splice(0, particles.length - cap);
-      last = point; lastEmit = now;
       if (!frame) frame = requestAnimationFrame(draw);
     };
     const mouse = (event: PointerEvent) => {
       if (event.pointerType !== "mouse" || !fine.matches || touchId !== null) return;
       const target = event.target as Element;
-      if (target.closest(interactive)) { last = null; return; }
+      if (target.closest(interactive)) { last = null; distanceRemainder = 0; return; }
       emit({ x: event.clientX, y: event.clientY }, "desktop");
     };
     // Touch events continue during native scrolling, unlike cancelled Pointer Events.
     // Every listener is passive; we never capture pointers or preventDefault.
     const startTouch = (event: TouchEvent) => {
-      if (event.touches.length !== 1 || (event.target as Element).closest(interactive)) { touchId = null; last = null; return; }
+      if (event.touches.length !== 1 || (event.target as Element).closest(interactive)) {
+        touchId = null; last = null; distanceRemainder = 0; lastEmit = 0; return;
+      }
       if (mode !== "touch") { reset(); mode = "touch"; }
       const touch = event.touches[0];
-      touchId = touch.identifier; last = null;
+      touchId = touch.identifier; last = null; distanceRemainder = 0; lastEmit = 0;
       emit({ x: touch.clientX, y: touch.clientY }, "touch");
     };
     const moveTouch = (event: TouchEvent) => {
-      if (event.touches.length !== 1) { touchId = null; last = null; return; }
+      if (event.touches.length !== 1) { touchId = null; last = null; distanceRemainder = 0; lastEmit = 0; return; }
       const touch = event.touches[0];
       if (touch.identifier !== touchId) return;
       emit({ x: touch.clientX, y: touch.clientY }, "touch");
     };
-    const endTouch = () => { touchId = null; last = null; };
+    const endTouch = () => { touchId = null; last = null; distanceRemainder = 0; lastEmit = 0; };
     const visibility = () => { if (document.hidden) reset(); };
     resize();
     window.addEventListener("resize", resize, { passive: true });
