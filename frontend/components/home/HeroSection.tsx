@@ -21,8 +21,8 @@ export const HERO_IMAGES: HeroImage[] = [
 ];
 
 export const HERO_MOTION = {
-  desktop: { zoom: 0.32, backgroundShift: 96, brandGrowth: 0.22, preludeShrink: 0.22, outward: 48 },
-  mobile: { zoom: 0.14, backgroundShift: 42, brandGrowth: 0.14, preludeShrink: 0.18, outward: 24 },
+  desktop: { zoom: 0.32, backgroundShift: 96 },
+  mobile: { zoom: 0.14, backgroundShift: 42 },
 };
 
 function ComicScene({ image, priority = false }: { image: HeroImage; priority?: boolean }) {
@@ -113,17 +113,14 @@ export function HeroSection() {
       const elapsed = Math.min(50, lastTime ? time - lastTime : 16);
       lastTime = time;
       smoothProgress += (targetProgress - smoothProgress) * (1 - Math.exp(-elapsed / 65));
-      const progress = Math.min(1, smoothProgress / .65);
       const amount = mobile.matches ? HERO_MOTION.mobile : HERO_MOTION.desktop;
-      // Smoothstep softens the start/end of the background depth, while the
-      // established title zoom and outward lettering keep their own progress.
+      // Start from the tighter framing previously reached after scrolling,
+      // then smoothly open the artwork as the hero scrolls away.
       const depthProgress = smoothProgress * smoothProgress * (3 - 2 * smoothProgress);
-      element.style.setProperty("--comic-scale", String(1.12 + amount.zoom * (1 - depthProgress)));
-      element.style.setProperty("--comic-y", `${depthProgress * amount.backgroundShift}px`);
-      element.style.setProperty("--brand-scale", String(1 + amount.brandGrowth * progress));
-      element.style.setProperty("--prelude-scale", String(1 - amount.preludeShrink * progress));
-      element.style.setProperty("--verse-scale", String(1 - amount.preludeShrink * progress));
-      element.style.setProperty("--satellite-y", `${amount.outward * progress}px`);
+      element.style.setProperty("--comic-scale", String(1.12 + amount.zoom * depthProgress));
+      element.style.setProperty("--comic-y", `${(1 - depthProgress) * amount.backgroundShift}px`);
+      element.style.setProperty("--side-rail-fr", `${depthProgress}fr`);
+      element.style.setProperty("--side-rail-opacity", String(depthProgress));
       if (Math.abs(targetProgress - smoothProgress) > .001 && visible && !document.hidden) frame = requestAnimationFrame(update);
     };
     const schedule = () => {
@@ -161,32 +158,36 @@ export function HeroSection() {
       window.removeEventListener("scroll", schedule);
       document.removeEventListener("visibilitychange", activity);
       element.dataset.running = "false";
-      ["--brand-scale", "--prelude-scale", "--verse-scale", "--satellite-y", "--comic-scale", "--comic-y"].forEach((key) => element.style.removeProperty(key));
+      ["--comic-scale", "--comic-y", "--side-rail-fr", "--side-rail-opacity"].forEach((key) => element.style.removeProperty(key));
     };
   }, [enabled]);
 
   return (
     <section ref={hero} className={styles.hero} aria-labelledby="hero-title" data-running="true">
       <div className={styles.artwork} aria-hidden="true">
-        <ComicRail images={firstColumn} firstRail />
-        <ComicRail images={secondColumn} reverse />
+        <ComicRail images={thirdColumn} reverse />
+        <ComicRail images={firstColumn} />
+        <ComicRail images={secondColumn} reverse firstRail />
         <ComicRail images={thirdColumn} />
+        <ComicRail images={firstColumn} reverse />
       </div>
       <div className={styles.wash} aria-hidden="true" />
       <div className={styles.copy}>
         <p className={styles.eyebrow}>CULTURE. CHAOS. CONNECTION.</p>
         <h1 id="hero-title" className={styles.title}>
           <span className={styles.splash}>
-            <Image
-              className={styles.bubble}
-              src="/brand/hero-cloud-red.png"
-              width={1537}
-              height={1023}
-              alt=""
-              aria-hidden="true"
-              sizes="(max-width: 680px) 100vw, 1100px"
-              loading="eager"
-            />
+            <span className={styles.bubble} aria-hidden="true">
+              <Image
+                className={styles.bubbleOutline}
+                src="/brand/hero-cloud-red.png"
+                width={1537}
+                height={1023}
+                alt=""
+                sizes="(max-width: 680px) 100vw, 1100px"
+                loading="eager"
+              />
+              <span className={styles.bubbleFill} />
+            </span>
             <span className={styles.prelude}>ENTER THE</span>
             <span className={styles.brand}>YUVAAN</span>
             <span className={styles.verse}>
