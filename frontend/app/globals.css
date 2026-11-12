@@ -825,6 +825,22 @@ a[class*="bg-[#121110]"]:hover {
   box-shadow: 6px 6px 0 #121110 !important;
 }
 
+/* Give yellow calls to action a visible comic-book shadow on dark sections. */
+.comic-home :is([data-home-section="intro"], [data-home-section="schedule"], [data-home-section="sponsors"])
+  :is(a, button)[class*="bg-[#F2AE30]"] {
+  box-shadow: 4px 4px 0 #4c94f6 !important;
+}
+.comic-home :is([data-home-section="intro"], [data-home-section="schedule"], [data-home-section="sponsors"])
+  :is(a, button)[class*="bg-[#F2AE30]"]:hover {
+  background-color: #f04b2b !important;
+  color: #fff !important;
+  box-shadow: 6px 6px 0 #4c94f6 !important;
+}
+.comic-home :is([data-home-section="intro"], [data-home-section="schedule"], [data-home-section="sponsors"])
+  :is(a, button)[class*="bg-[#F2AE30]"]:active {
+  box-shadow: 2px 2px 0 #4c94f6 !important;
+}
+
 
 /* Mobile */
 @media (prefers-reduced-motion: reduce) {
