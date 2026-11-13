@@ -6,18 +6,13 @@ import { Badge } from "@/components/ui/Badge";
 
 export function AboutSection() {
   return (
-    <section data-home-section="intro" className="py-14 sm:py-20 bg-[var(--color-surface)] border-y-2 border-[var(--color-border-dark)] relative overflow-hidden">
+    <section data-home-section="intro" className="py-16 sm:py-24 bg-[var(--color-surface)] border-y-2 border-[var(--color-border-dark)] relative overflow-hidden">
       {/* Background halftone accent */}
       <div className="absolute inset-0 comic-dots-subtle pointer-events-none opacity-50" />
 
       <Container className="relative z-10">
         {/* Section Heading */}
         <div className="mb-8 sm:mb-12 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Badge variant="section-light" comicStamp>
-              ✦ About Yuvaan
-            </Badge>
-          </div>
           <h2 className="home-section-title text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight uppercase text-[var(--poster-orange)] leading-[1.15] w-full max-w-none">
             A Celebration of Student Ingenuity &amp; Artistry
           </h2>
